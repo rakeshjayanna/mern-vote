@@ -1,39 +1,55 @@
 const mongoose = require('mongoose');
-const User = require('./user');
 
-const optionSchema = new mongoose.Schema({
-  option: String,
-  votes: {
-    type: Number,
-    default: 0,
+const PollSchema = new mongoose.Schema({
+  question: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 300
   },
-});
-
-const pollSchema = new mongoose.Schema({
-  user: {
+  options: [{
+    text: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    },
+    votes: {
+      type: Number,
+      default: 0
+    }
+  }],
+  createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    required: true
   },
-  created: {
+  totalVotes: {
+    type: Number,
+    default: 0
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  votedUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  createdAt: {
     type: Date,
-    default: Date.now,
+    default: Date.now
   },
-  question: String,
-  options: [optionSchema],
-  voted: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-});
-
-pollSchema.pre('remove', async function(next) {
-  try {
-    const user = await User.findById(this.user);
-    user.polls = user.polls.filter(
-      poll => poll._id.toString() !== this._id.toString(),
-    );
-    await user.save();
-    return next();
-  } catch (err) {
-    return next(err);
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-module.exports = mongoose.model('Poll', pollSchema);
+// Automatically update totalVotes on save
+PollSchema.pre('save', function(next) {
+this.totalVotes = this.options[0].votes;
+next();
+});
+
+module.exports = mongoose.model('Poll', PollSchema);
